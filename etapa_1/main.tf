@@ -11,6 +11,8 @@ provider "aws" {
   region = var.aws_region
 }
 
+data "aws_caller_identity" "current" {}
+
 # ECR: 3 repositorios para ventas, despachos y frontend
 resource "aws_ecr_repository" "backend_ventas" {
   name         = "${var.project_name}-backend-ventas"

@@ -18,13 +18,18 @@ aws sts get-caller-identity
 ## 2. Etapa 1 — ECR
 
 ```bash
-cd infrastructure/etapa_1
+cd etapa_1
 terraform init
 terraform apply
 terraform output
 ```
 
 Consola AWS → **ECR** → 3 repositorios `innovatech-*`.
+
+| Output | Uso |
+|--------|-----|
+| `ecr_registry` | Secret `ECR_REGISTRY` en GitHub (ventas, despachos, frontend) |
+| `ecr_ventas` / `ecr_despachos` / `ecr_frontend` | URLs completas de cada repositorio |
 
 ## 3. Etapa 2 — VPC + EC2
 
@@ -46,6 +51,21 @@ Consola AWS → **EC2** (3 instancias), **VPC**, **Security Groups**.
 ## Destruir
 
 ```bash
-cd infrastructure/etapa_2 && terraform destroy
-cd infrastructure/etapa_1 && terraform destroy
+cd etapa_2 && terraform destroy
+cd ../etapa_1 && terraform destroy
 ```
+
+## Secrets en GitHub Actions (cada repo de app)
+
+En **Settings → Secrets → Actions**, configura (no uses Docker Hub):
+
+| Secret | Origen |
+|--------|--------|
+| `AWS_ACCESS_KEY_ID` | Learner Lab |
+| `AWS_SECRET_ACCESS_KEY` | Learner Lab |
+| `AWS_SESSION_TOKEN` | Learner Lab (obligatorio en Academy) |
+| `AWS_REGION` | Ej. `us-east-1` |
+| `ECR_REGISTRY` | `terraform output -raw ecr_registry` (etapa_1) |
+| `EC2_HOST` | IP pública de la instancia donde despliegas |
+| `EC2_USER` | `ec2-user` (Amazon Linux 2) |
+| `SSH_PRIVATE_KEY` | Contenido del `.pem` (vockey) |
