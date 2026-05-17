@@ -1,0 +1,4 @@
+aws_region     = "us-east-1"
+project_name   = "innovatech"
+key_pair_name  = "vockey"
+instance_type  = "t2.micro"
