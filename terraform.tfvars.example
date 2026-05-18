@@ -1,4 +1,5 @@
 aws_region     = "us-east-1"
 project_name   = "innovatech"
+# En AWS Academy el par en consola es "vockey". El .pem descargado puede llamarse labsuser.pem.
 key_pair_name  = "vockey"
 instance_type  = "t2.micro"

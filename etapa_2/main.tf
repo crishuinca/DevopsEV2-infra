@@ -131,6 +131,18 @@ resource "aws_security_group" "backend_sg" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  ingress {
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [aws_security_group.backend_sg.id]
+  }
+  ingress {
+    from_port       = 3307
+    to_port         = 3307
+    protocol        = "tcp"
+    security_groups = [aws_security_group.backend_sg.id]
+  }
   egress {
     from_port   = 0
     to_port     = 0
@@ -208,6 +220,11 @@ resource "aws_launch_template" "backend_lt" {
     yum update -y && yum install -y docker
     systemctl start docker && systemctl enable docker
     usermod -aG docker ec2-user
+    until docker info > /dev/null 2>&1; do sleep 3; done
+    docker run -d --name mysql-ventas --restart always \
+      -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=ventas_db -p 3306:3306 mysql:8.0
+    docker run -d --name mysql-despachos --restart always \
+      -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=despachos_db -p 3307:3306 mysql:8.0
   EOF
   )
 }
