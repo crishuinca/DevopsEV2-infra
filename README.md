@@ -69,16 +69,26 @@ En **Settings → Secrets → Actions** (no uses Docker Hub).
 | `AWS_REGION` | Ej. `us-east-1` |
 | `ECR_REGISTRY` | `terraform output -raw ecr_registry` (etapa_1) |
 | `EC2_USER` | `ec2-user` (Amazon Linux 2) |
-| `SSH_PRIVATE_KEY` | Contenido del `.pem` (vockey) |
+| `SSH_PRIVATE_KEY` | Ver sección **Clave SSH** abajo |
+
+### Clave SSH (AWS Academy)
+
+En la consola EC2 el par se llama **`vockey`** (único par del lab). Al descargar desde Learner Lab el archivo suele llamarse **`labsuser.pem`**: es la misma clave privada; úsala para el secret.
+
+1. Abre `labsuser.pem` con Bloc de notas.
+2. Copia **todo** (desde `-----BEGIN` hasta `-----END`).
+3. Pégalo en el secret `SSH_PRIVATE_KEY` en los **3** repos (ventas, despachos, frontend).
+
+No subas el `.pem` a Git. Terraform usa `key_pair_name = "vockey"` en `etapa_2/terraform.tfvars`.
 
 ### Backend ventas y backend despachos
 
 | Secret | Origen |
 |--------|--------|
 | `EC2_HOST` | `terraform output -raw backend_public_ip` (etapa_2) |
-| `DB_PRIVATE_IP` | `terraform output -raw database_private_ip` (etapa_2) |
+| `DB_PRIVATE_IP` | `terraform output -raw backend_private_ip` (etapa_2) |
 
-Ventas usa MySQL en puerto **3306**; despachos en puerto **3307** (contenedores `mysql-ventas` / `mysql-despachos` en la EC2 database).
+MySQL corre en la **misma EC2 backend** (un solo contenedor `mysql-innovatech`, puerto **3306**; bases `ventas_db` y `despachos_db`). Usa la IP privada del backend (`backend_private_ip`), no la de la instancia database.
 
 ### Frontend
 
