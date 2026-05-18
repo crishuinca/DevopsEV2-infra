@@ -55,9 +55,11 @@ cd etapa_2 && terraform destroy
 cd ../etapa_1 && terraform destroy
 ```
 
-## Secrets en GitHub Actions (cada repo de app)
+## Secrets en GitHub Actions
 
-En **Settings → Secrets → Actions**, configura (no uses Docker Hub):
+En **Settings → Secrets → Actions** (no uses Docker Hub).
+
+### Todos los repos (ventas, despachos, frontend)
 
 | Secret | Origen |
 |--------|--------|
@@ -66,6 +68,23 @@ En **Settings → Secrets → Actions**, configura (no uses Docker Hub):
 | `AWS_SESSION_TOKEN` | Learner Lab (obligatorio en Academy) |
 | `AWS_REGION` | Ej. `us-east-1` |
 | `ECR_REGISTRY` | `terraform output -raw ecr_registry` (etapa_1) |
-| `EC2_HOST` | IP pública de la instancia donde despliegas |
 | `EC2_USER` | `ec2-user` (Amazon Linux 2) |
 | `SSH_PRIVATE_KEY` | Contenido del `.pem` (vockey) |
+
+### Backend ventas y backend despachos
+
+| Secret | Origen |
+|--------|--------|
+| `EC2_HOST` | `terraform output -raw backend_public_ip` (etapa_2) |
+| `DB_PRIVATE_IP` | `terraform output -raw database_private_ip` (etapa_2) |
+
+Ventas usa MySQL en puerto **3306**; despachos en puerto **3307** (contenedores `mysql-ventas` / `mysql-despachos` en la EC2 database).
+
+### Frontend
+
+| Secret | Origen |
+|--------|--------|
+| `EC2_HOST` | `terraform output -raw frontend_public_ip` (etapa_2) |
+| `BACKEND_HOST` | `terraform output -raw backend_private_ip` (etapa_2) |
+
+Nginx en la EC2 frontend hace proxy a `BACKEND_HOST:8081` (ventas) y `:8082` (despachos).
