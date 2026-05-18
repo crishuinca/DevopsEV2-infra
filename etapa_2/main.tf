@@ -117,7 +117,7 @@ resource "aws_security_group" "backend_sg" {
     from_port       = 8081
     to_port         = 8081
     protocol        = "tcp"
-    security_groups = [aws_security_group.frontend_sg.id]
+    self            = true
   }
   ingress {
     from_port       = 8082
@@ -130,6 +130,18 @@ resource "aws_security_group" "backend_sg" {
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    self            = true 
+  }
+  ingress {
+    from_port       = 3307
+    to_port         = 3307
+    protocol        = "tcp"
+    self            = true 
   }
   egress {
     from_port   = 0
