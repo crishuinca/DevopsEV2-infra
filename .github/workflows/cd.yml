@@ -1,0 +1,128 @@
+name: Despliegue en AWS con EKS
+
+on:
+  push:
+    branches:
+      - deploy
+
+env:
+  AWS_REGION: us-east-1
+  CLUSTER_NAME: innovatech-cluster
+  ECR_FRONTEND: innovatech-frontend
+  ECR_VENTAS: innovatech-backend-ventas
+  ECR_DESPACHOS: innovatech-backend-despachos
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout infra (manifiestos k8s)
+        uses: actions/checkout@v4
+
+      - name: Checkout frontend
+        uses: actions/checkout@v4
+        with:
+          repository: crishuinca/DevopsEV2-frontend
+          path: apps/frontend
+          ref: ${{ github.ref_name }}
+
+      - name: Checkout backend ventas
+        uses: actions/checkout@v4
+        with:
+          repository: crishuinca/DevopsEV2-backend-ventas
+          path: apps/backend-ventas
+          ref: ${{ github.ref_name }}
+
+      - name: Checkout backend despachos
+        uses: actions/checkout@v4
+        with:
+          repository: crishuinca/DevopsEV2-backend-despachos
+          path: apps/backend-despachos
+          ref: ${{ github.ref_name }}
+
+      - name: Configurar credenciales de AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login con ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Obtener Account ID y URLs ECR
+        run: |
+          echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
+          echo "FRONTEND_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND}" >> $GITHUB_ENV
+          echo "VENTAS_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_VENTAS}" >> $GITHUB_ENV
+          echo "DESPACHOS_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_DESPACHOS}" >> $GITHUB_ENV
+
+      - name: Build y push backend ventas
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            -t $VENTAS_ECR:${GITHUB_SHA} \
+            -t $VENTAS_ECR:latest \
+            ./apps/backend-ventas/Springboot-API-REST \
+            --load
+          docker push $VENTAS_ECR:${GITHUB_SHA}
+          docker push $VENTAS_ECR:latest
+
+      - name: Build y push backend despachos
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            -t $DESPACHOS_ECR:${GITHUB_SHA} \
+            -t $DESPACHOS_ECR:latest \
+            ./apps/backend-despachos/Springboot-API-REST-DESPACHO \
+            --load
+          docker push $DESPACHOS_ECR:${GITHUB_SHA}
+          docker push $DESPACHOS_ECR:latest
+
+      - name: Build y push frontend
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            -t $FRONTEND_ECR:${GITHUB_SHA} \
+            -t $FRONTEND_ECR:latest \
+            ./apps/frontend \
+            --load
+          docker push $FRONTEND_ECR:${GITHUB_SHA}
+          docker push $FRONTEND_ECR:latest
+
+      - name: Instalación de kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Conectarse con EKS
+        run: |
+          aws eks update-kubeconfig \
+            --region $AWS_REGION \
+            --name $CLUSTER_NAME
+
+      - name: Aplicar manifiestos Kubernetes
+        run: kubectl apply -f k8s/
+
+      - name: Actualizar imagen backend ventas
+        run: |
+          kubectl set image deployment/backend-ventas \
+            backend-ventas=$VENTAS_ECR:${GITHUB_SHA}
+
+      - name: Actualizar imagen backend despachos
+        run: |
+          kubectl set image deployment/backend-despachos \
+            backend-despachos=$DESPACHOS_ECR:${GITHUB_SHA}
+
+      - name: Actualizar imagen frontend
+        run: |
+          kubectl set image deployment/frontend \
+            frontend=$FRONTEND_ECR:${GITHUB_SHA}
+
+      - name: Esperar despliegue backend ventas
+        run: kubectl rollout status deployment/backend-ventas --timeout=180s
+
+      - name: Esperar despliegue backend despachos
+        run: kubectl rollout status deployment/backend-despachos --timeout=180s
+
+      - name: Esperar despliegue frontend
+        run: kubectl rollout status deployment/frontend --timeout=180s
