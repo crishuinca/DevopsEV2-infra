@@ -53,10 +53,11 @@ jobs:
 
       - name: Obtener Account ID y URLs ECR
         run: |
-          echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
-          echo "FRONTEND_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND}" >> $GITHUB_ENV
-          echo "VENTAS_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_VENTAS}" >> $GITHUB_ENV
-          echo "DESPACHOS_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_DESPACHOS}" >> $GITHUB_ENV
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
+          echo "FRONTEND_ECR=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_FRONTEND" >> $GITHUB_ENV
+          echo "VENTAS_ECR=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_VENTAS" >> $GITHUB_ENV
+          echo "DESPACHOS_ECR=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_DESPACHOS" >> $GITHUB_ENV
 
       - name: Build y push backend ventas
         run: |
