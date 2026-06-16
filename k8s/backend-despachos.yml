@@ -1,0 +1,52 @@
+# Backend despachos — DNS interno: http://backend-despachos:8081
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-despachos
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: backend-despachos
+  template:
+    metadata:
+      labels:
+        app: backend-despachos
+    spec:
+      containers:
+        - name: backend-despachos
+          image: 000867060914.dkr.ecr.us-east-1.amazonaws.com/innovatech-backend-despachos:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+          env:
+            - name: DB_HOST
+              value: mysql
+            - name: DB_ENDPOINT
+              value: mysql
+            - name: DB_PORT
+              value: "3306"
+            - name: DB_NAME
+              value: despachos_db
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-despachos
+spec:
+  selector:
+    app: backend-despachos
+  ports:
+    - port: 8081
+      targetPort: 8081
+  type: ClusterIP
