@@ -1,4 +1,4 @@
-name: Despliegue en AWS con EKS
+name: CI/CD - Innovatech EKS
 
 on:
   push:
@@ -13,7 +13,65 @@ env:
   ECR_DESPACHOS: innovatech-backend-despachos
 
 jobs:
+  test:
+    name: Validacion de build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout infra
+        uses: actions/checkout@v4
+
+      - name: Checkout frontend
+        uses: actions/checkout@v4
+        with:
+          repository: crishuinca/DevopsEV2-frontend
+          path: apps/frontend
+          ref: ${{ github.ref_name }}
+
+      - name: Checkout backend ventas
+        uses: actions/checkout@v4
+        with:
+          repository: crishuinca/DevopsEV2-backend-ventas
+          path: apps/backend-ventas
+          ref: ${{ github.ref_name }}
+
+      - name: Checkout backend despachos
+        uses: actions/checkout@v4
+        with:
+          repository: crishuinca/DevopsEV2-backend-despachos
+          path: apps/backend-despachos
+          ref: ${{ github.ref_name }}
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Compilar backend ventas
+        working-directory: apps/backend-ventas/Springboot-API-REST
+        run: ./mvnw package -DskipTests -B
+
+      - name: Compilar backend despachos
+        working-directory: apps/backend-despachos/Springboot-API-REST-DESPACHO
+        run: ./mvnw package -DskipTests -B
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: apps/frontend
+        run: |
+          npm ci
+          npm run build
+
   deploy:
+    name: Build, push y deploy
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout infra (manifiestos k8s)
@@ -50,6 +108,9 @@ jobs:
 
       - name: Login con ECR
         uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Obtener Account ID y URLs ECR
         run: |
@@ -92,7 +153,7 @@ jobs:
           docker push $FRONTEND_ECR:${GITHUB_SHA}
           docker push $FRONTEND_ECR:latest
 
-      - name: Instalación de kubectl
+      - name: Instalacion de kubectl
         uses: azure/setup-kubectl@v4
 
       - name: Conectarse con EKS
@@ -101,8 +162,24 @@ jobs:
             --region $AWS_REGION \
             --name $CLUSTER_NAME
 
-      - name: Aplicar manifiestos Kubernetes
-        run: kubectl apply -f k8s/
+      - name: Preparar manifiestos Kubernetes
+        run: |
+          ECR_PREFIX="$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+          sed -i "s|ECR_REGISTRY|$ECR_PREFIX|g" k8s/frontend.yml k8s/backend-ventas.yml k8s/backend-despachos.yml
+
+      - name: Aplicar secretos y base de datos
+        run: |
+          kubectl apply -f k8s/secrets.yml
+          kubectl apply -f k8s/mysql.yml
+
+      - name: Aplicar metrics-server y aplicaciones
+        run: |
+          kubectl apply -f k8s/metrics-server.yml
+          kubectl apply -f k8s/backend-ventas.yml
+          kubectl apply -f k8s/backend-despachos.yml
+          kubectl apply -f k8s/frontend.yml
+          kubectl apply -f k8s/hpa-backend-ventas.yml
+          kubectl apply -f k8s/hpa-backend-despachos.yml
 
       - name: Actualizar imagen backend ventas
         run: |
@@ -120,10 +197,16 @@ jobs:
             frontend=$FRONTEND_ECR:${GITHUB_SHA}
 
       - name: Esperar despliegue backend ventas
-        run: kubectl rollout status deployment/backend-ventas --timeout=180s
+        run: kubectl rollout status deployment/backend-ventas --timeout=300s
 
       - name: Esperar despliegue backend despachos
-        run: kubectl rollout status deployment/backend-despachos --timeout=180s
+        run: kubectl rollout status deployment/backend-despachos --timeout=300s
 
       - name: Esperar despliegue frontend
-        run: kubectl rollout status deployment/frontend --timeout=180s
+        run: kubectl rollout status deployment/frontend --timeout=300s
+
+      - name: Verificar pods y URL publica
+        run: |
+          kubectl get pods -o wide
+          kubectl get svc frontend
+          echo "Imagenes desplegadas con tag ${GITHUB_SHA}"

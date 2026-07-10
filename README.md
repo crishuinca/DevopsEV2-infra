@@ -102,7 +102,7 @@ cd ../etapa_1 && terraform destroy
 | Etapa | Recursos |
 |-------|----------|
 | **etapa_1** | 3 repos ECR: `innovatech-frontend`, `innovatech-backend-ventas`, `innovatech-backend-despachos` |
-| **etapa_3** | VPC, 2 subnets públicas, IGW, clúster EKS `innovatech-cluster`, node group `t3.medium` (1–3 nodos) |
+| **etapa_3** | VPC, 2 subnets públicas, IGW, **security groups**, **CloudWatch logs**, clúster EKS `innovatech-cluster`, node group `t3.medium` (1–3 nodos) |
 | **k8s/** | Deployments (frontend, 2 backends, MySQL), Services, Secret, ConfigMap, HPA, metrics-server |
 
 | Output (etapa_1) | Uso |
@@ -114,6 +114,28 @@ cd ../etapa_1 && terraform destroy
 |--------|-----|
 | `cluster_name` | Nombre del clúster (`innovatech-cluster`) — coincide con `cd.yml` |
 | `configure_kubectl` | Comando para conectar `kubectl` al clúster |
+| `eks_cluster_security_group_id` / `eks_node_security_group_id` | IDs de los security groups (para la presentación / evidencia) |
+| `cloudwatch_log_group` | Logs del API server EKS en CloudWatch |
+
+### Pipeline CI/CD (rama `deploy`)
+
+El workflow `.github/workflows/cd.yml` tiene **dos jobs**:
+
+1. **Validacion de build** — `mvn package -DskipTests` en backends + `npm run build` en frontend  
+2. **deploy** — build Docker, push a ECR con tag `GITHUB_SHA`, `kubectl apply` y rollout
+
+> Los tests unitarios del codigo original se ejecutan en local con `docker-compose` (requieren MySQL). El pipeline valida compilacion sin modificar el codigo fuente de las apps.
+
+Secretos en GitHub: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`.
+
+### Observabilidad (para el informe / presentación)
+
+| Fuente | Dónde verlo |
+|--------|-------------|
+| Logs del pipeline | GitHub Actions → workflow run → job logs |
+| Logs del cluster EKS | AWS Console → CloudWatch → Log groups → `/aws/eks/innovatech-cluster/cluster` |
+| Métricas de pods (HPA) | `kubectl top pods` (requiere metrics-server, ya incluido en `k8s/`) |
+| Escalado automático | `kubectl get hpa` |
 
 MySQL en producción corre como **pod en EKS** (`mysql:3306`), con bases `ventas_db` y `despachos_db`.
 
@@ -168,15 +190,5 @@ GitHub (rama deploy) → Actions (cd.yml)
 
 > **Nota EV3:** el despliegue a EKS se dispara **solo desde este repo**. Los repos de apps (`frontend`, `ventas`, `despachos`) no tienen pipeline propio; este workflow hace checkout de los tres y orquesta build + deploy.
 
----
 
-## 🔧 Cómo extender este proyecto
 
-- Módulos Terraform (`modules/network`, `modules/eks`).
-- Backend remoto (S3 + DynamoDB lock) — no disponible en todos los labs.
-- RDS en lugar de MySQL en pod.
-- Ingress Controller (ALB) en lugar de Service LoadBalancer.
-- PersistentVolumeClaim para datos de MySQL.
-- Liveness/readiness probes en los deployments.
-- Variables por ambiente (`dev` / `prod` tfvars).
-- La carpeta `etapa_2/` corresponde al EP2 (EC2); se mantiene como referencia histórica.

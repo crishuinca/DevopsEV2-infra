@@ -4,7 +4,7 @@ kind: Deployment
 metadata:
   name: backend-ventas
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: backend-ventas
@@ -15,10 +15,20 @@ spec:
     spec:
       containers:
         - name: backend-ventas
-          image: 000867060914.dkr.ecr.us-east-1.amazonaws.com/innovatech-backend-ventas:latest
+          image: ECR_REGISTRY/innovatech-backend-ventas:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
           resources:
             requests:
               cpu: 100m
