@@ -4,7 +4,7 @@ kind: Deployment
 metadata:
   name: backend-despachos
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: backend-despachos
@@ -15,10 +15,20 @@ spec:
     spec:
       containers:
         - name: backend-despachos
-          image: 000867060914.dkr.ecr.us-east-1.amazonaws.com/innovatech-backend-despachos:latest
+          image: ECR_REGISTRY/innovatech-backend-despachos:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8081
+          livenessProbe:
+            tcpSocket:
+              port: 8081
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          readinessProbe:
+            tcpSocket:
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
           resources:
             requests:
               cpu: 100m

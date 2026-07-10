@@ -23,6 +23,21 @@ output "vpc_id" {
   value       = aws_vpc.eks_vpc.id
 }
 
+output "eks_cluster_security_group_id" {
+  description = "Security group del control plane EKS"
+  value       = aws_security_group.eks_cluster_sg.id
+}
+
+output "eks_node_security_group_id" {
+  description = "Security group de los nodos worker"
+  value       = aws_security_group.eks_node_sg.id
+}
+
+output "cloudwatch_log_group" {
+  description = "Log group de CloudWatch para logs del cluster EKS"
+  value       = aws_cloudwatch_log_group.eks.name
+}
+
 output "configure_kubectl" {
   description = "Comando para conectar kubectl al clúster"
   value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${aws_eks_cluster.eks.name}"
