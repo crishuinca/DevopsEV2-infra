@@ -1,4 +1,5 @@
-# MySQL compartido: ventas_db + despachos_db 
+# MySQL compartido: ventas_db + despachos_db
+# emptyDir: evita PVC Pending en AWS Academy Learner Lab (datos efimeros)
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -7,23 +8,14 @@ data:
   init.sql: |
     CREATE DATABASE IF NOT EXISTS despachos_db;
 ---
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: mysql-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mysql
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: mysql
@@ -37,15 +29,25 @@ spec:
           image: mysql:8.0
           ports:
             - containerPort: 3306
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          startupProbe:
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 36
           livenessProbe:
             tcpSocket:
               port: 3306
-            initialDelaySeconds: 30
             periodSeconds: 20
           readinessProbe:
             tcpSocket:
               port: 3306
-            initialDelaySeconds: 15
             periodSeconds: 10
           env:
             - name: MYSQL_ROOT_PASSWORD
@@ -65,8 +67,7 @@ spec:
           configMap:
             name: mysql-init
         - name: mysql-data
-          persistentVolumeClaim:
-            claimName: mysql-pvc
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
