@@ -50,11 +50,17 @@ jobs:
 
       - name: Compilar backend ventas
         working-directory: apps/backend-ventas/Springboot-API-REST
-        run: bash mvnw package -DskipTests -B
+        run: |
+          sed -i 's/\r$//' mvnw
+          chmod +x mvnw
+          ./mvnw package -DskipTests -B
 
       - name: Compilar backend despachos
         working-directory: apps/backend-despachos/Springboot-API-REST-DESPACHO
-        run: bash mvnw package -DskipTests -B
+        run: |
+          sed -i 's/\r$//' mvnw
+          chmod +x mvnw
+          ./mvnw package -DskipTests -B
 
       - name: Configurar Node.js
         uses: actions/setup-node@v4
