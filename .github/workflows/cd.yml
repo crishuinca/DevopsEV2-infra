@@ -223,4 +223,11 @@ jobs:
         run: |
           kubectl get pods -o wide
           kubectl get svc frontend
+          kubectl describe svc frontend | tail -20
+          NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}')
+          if [ -z "$NODE_IP" ]; then
+            NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+          fi
+          NODE_PORT=$(kubectl get svc frontend -o jsonpath='{.spec.ports[0].nodePort}')
+          echo "Si EXTERNAL-IP sigue pending, prueba: http://${NODE_IP}:${NODE_PORT}"
           echo "Imagenes desplegadas con tag ${GITHUB_SHA}"
