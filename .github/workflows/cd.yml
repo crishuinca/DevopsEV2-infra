@@ -176,7 +176,15 @@ jobs:
       - name: Aplicar secretos y base de datos
         run: |
           kubectl apply -f k8s/secrets.yml
+          kubectl delete pvc mysql-pvc --ignore-not-found=true
           kubectl apply -f k8s/mysql.yml
+          kubectl rollout status deployment/mysql --timeout=600s || {
+            echo "=== MySQL no levanto ==="
+            kubectl get pods -l app=mysql
+            kubectl describe pod -l app=mysql
+            kubectl logs -l app=mysql --tail=80 || true
+            exit 1
+          }
 
       - name: Aplicar metrics-server y aplicaciones
         run: |
@@ -201,9 +209,6 @@ jobs:
         run: |
           kubectl set image deployment/frontend \
             frontend=$FRONTEND_ECR:${GITHUB_SHA}
-
-      - name: Esperar MySQL disponible
-        run: kubectl wait --for=condition=available deployment/mysql --timeout=300s
 
       - name: Esperar despliegue backend ventas
         run: kubectl rollout status deployment/backend-ventas --timeout=600s
