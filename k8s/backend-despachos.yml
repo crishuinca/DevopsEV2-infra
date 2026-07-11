@@ -5,6 +5,8 @@ metadata:
   name: backend-despachos
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: backend-despachos
@@ -19,15 +21,18 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 8081
+          startupProbe:
+            tcpSocket:
+              port: 8081
+            failureThreshold: 36
+            periodSeconds: 10
           livenessProbe:
             tcpSocket:
               port: 8081
-            initialDelaySeconds: 60
             periodSeconds: 20
           readinessProbe:
             tcpSocket:
               port: 8081
-            initialDelaySeconds: 30
             periodSeconds: 10
           resources:
             requests:

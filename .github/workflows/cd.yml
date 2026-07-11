@@ -202,14 +202,17 @@ jobs:
           kubectl set image deployment/frontend \
             frontend=$FRONTEND_ECR:${GITHUB_SHA}
 
+      - name: Esperar MySQL disponible
+        run: kubectl wait --for=condition=available deployment/mysql --timeout=300s
+
       - name: Esperar despliegue backend ventas
-        run: kubectl rollout status deployment/backend-ventas --timeout=300s
+        run: kubectl rollout status deployment/backend-ventas --timeout=600s
 
       - name: Esperar despliegue backend despachos
-        run: kubectl rollout status deployment/backend-despachos --timeout=300s
+        run: kubectl rollout status deployment/backend-despachos --timeout=600s
 
       - name: Esperar despliegue frontend
-        run: kubectl rollout status deployment/frontend --timeout=300s
+        run: kubectl rollout status deployment/frontend --timeout=600s
 
       - name: Verificar pods y URL publica
         run: |
